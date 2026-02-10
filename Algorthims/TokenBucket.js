@@ -1,4 +1,5 @@
 import Redis from "ioredis";
+import crypto from "crypto"
 
 const redis = new Redis("redis://127.0.0.1:6379");
 
@@ -9,8 +10,9 @@ function TokenBucket(capacity){
      lastRefill: Date.now()
   };
 }
-async function getbucket(ip, capacity){
-  const key =`bucket:${ip}`;
+async function getbucket(role,  identifier, capacity){
+  const key = `bucket:${role}:${identifier}`;
+
   const data=await redis.hgetall(key)
   if(Object.keys(data).length==0){
     return TokenBucket(capacity)
@@ -33,9 +35,9 @@ function refilltoken(bucket, capacity,refillRatePerSec){
      }
      bucket.lastRefill = time;
 }
-async function consumetoken(ip,capacity,refillRatePerSec){
-  const key =`bucket:${ip}`;
-  const bucket=await getbucket(ip,capacity)
+async function consumetoken(role,identifier,capacity,refillRatePerSec){
+  const key = `bucket:${role}:${identifier}`;
+  const bucket=await getbucket(identifier,capacity)
   refilltoken(bucket,capacity,refillRatePerSec)
   if(bucket.tokens>=1){
     bucket.tokens-=1;
@@ -54,15 +56,35 @@ async function consumetoken(ip,capacity,refillRatePerSec){
     });
     await redis.expire(key,60)
     return false;
-  
 
+function roleconfig(role){
+  const rolesconfig={
+      guest: { capacity: 10, refillRatePerSec: 1 },
+      user: { capacity: 50, refillRatePerSec: 2 },
+      paid: { capacity: 200, refillRatePerSec: 5 },
+      admin: { capacity: 500, refillRatePerSec: 10 }
+     }
+    const config=rolesconfig[role] || roleconfig["guest"]
+    return config
 
-
-
+}
 }
 export function tokenBucketLimiter({ capacity, refillRatePerSec }) {
   return async function (req, res, next) {
-    const ip = req.ip;
+    let identifier;
+    let role;
+     if(req.user&&req.user.id){
+           identifier=req.user.id
+           role = req.user.role;
+     }
+     else if(req.clientToken){
+      identifier=req.clientToken
+     }
+     else{
+        identifier=req.ip
+        role = "guest";
+     }
+     
 
     const allowed = await consumetoken(ip, capacity, refillRatePerSec);
 
