@@ -5,21 +5,7 @@ function TokenBucket(capacity) {
     tokens: capacity,
     lastRefill: Date.now()
   };
-}
 
-function getBucket(role, identifier, capacity) {
-  const key = `bucket:${role}:${identifier}`;
-
-  const data = cache.get(key);
-
-  if (!data) {
-    return TokenBucket(capacity);
-  }
-
-  return {
-    tokens: parseFloat(data.tokens),
-    lastRefill: parseInt(data.lastRefill)
-  };
 }
 
 function refillToken(bucket, capacity, refillRatePerSec) {
@@ -45,13 +31,14 @@ function consumeToken(role, identifier, capacity, refillRatePerSec) {
 
   if (!bucket) {
     bucket = TokenBucket(capacity);
+    console.log(bucket)
   }
 
   refillToken(bucket, capacity, refillRatePerSec);
 
   if (bucket.tokens >= 1) {
     bucket.tokens -= 1;
-    cache.set(key, bucket, 60);
+    cache.set(key, bucket,300);
 
     return true;
   }
@@ -62,10 +49,10 @@ function consumeToken(role, identifier, capacity, refillRatePerSec) {
 
 function roleconfig(role) {
   const rolesconfig = {
-    guest: { capacity: 10, refillRatePerSec: 1 },
-    user: { capacity: 50, refillRatePerSec: 2 },
-    paid: { capacity: 200, refillRatePerSec: 5 },
-    admin: { capacity: 500, refillRatePerSec: 10 }
+    guest: { capacity: 20, refillRatePerSec: 2},
+    user: { capacity: 100, refillRatePerSec: 5},
+    paid: { capacity: 500, refillRatePerSec: 20},
+    admin: { capacity: 1000, refillRatePerSec: 50 }
   };
 
   return rolesconfig[role] || rolesconfig["guest"];
