@@ -63,10 +63,14 @@ export function tokenBucketLimiter({}) {
     let identifier;
     let role;
 
-    if (req.user && req.user.id) {
-      identifier = req.user.id;
-      role = req.user.role;
-    } 
+    if (!req.user) {
+        const roleHeader = req.headers["x-role"];
+        const idHeader = req.headers["x-user-id"];
+        if (roleHeader && idHeader) {
+              req.user = { id: idHeader, role: roleHeader };
+  }
+}
+
     else if (req.headers["x-client-token"]) {
       identifier = req.headers["x-client-token"];
       console.log(identifier);
