@@ -89,9 +89,4 @@ Creates Express middleware. `config.roles` lets you set per-role limits.
 
 ## Contributing
 Pull requests are welcome! Please open an issue first to discuss changes.
-Rate Limit Response
-
-
-
-When user exceeds limit:
 
